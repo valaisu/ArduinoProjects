@@ -21,12 +21,16 @@ bool borders = true;
 bool leftDown = false;
 bool rightDown = false;
 
+
 int counter = 0;
 
 bool gameOver = false;
 
 int directions[8] = {0, -1, 1, 0, 0, 1, -1, 0};
 //                     up   right left   down
+
+const int amountOfSquares = 14*14; 
+bool emptySquares[amountOfSquares]; 
 
 
 struct Pair {
@@ -43,8 +47,10 @@ private:
   int tail;
   int count;
   int direction = 1;
+  
   int fruitX = 1;
   int fruitY = 1;
+
 
   void resize(int newCapacity) {
     Pair* temp = new Pair[newCapacity];
@@ -69,15 +75,27 @@ public:
   void newFruit() {
     /*
     board has n squares
+    keep list of empty squares
     snake len = x
     take rand int between r = [0, n-x-1]
-    move r times, skipping all squares containing snake
-    end up in free square
+    choose emptySquares[r]
     */
     int square = random(0, boardSize*boardSize-count-1);
+
+    Serial.print("New: ");
+    Serial.println(square);
+    int free = 0;
     int current = 0;
     while (true) {
-      
+      if (emptySquares[current]) {
+        if (free == square) {
+          fruitX = square/boardSize;
+          fruitY = square%boardSize;
+          break;
+        }
+        free ++;
+      }
+      current ++;
     }
   }
 
@@ -108,16 +126,14 @@ public:
         }
     // Check collision, positions not updated yet
     for (int i = count-4; i>0; i-=2) {
-      Serial.print(newX);
-      Serial.print(" ");
-      Serial.print(newY);
-      Serial.print(" ");
-      Serial.print(array[(head+i)%capacity].first);
-      Serial.print(" ");
-      Serial.println(array[(head+i)%capacity].second);
       if (newX == array[(head+i)%capacity].first && newY == array[(head+i)%capacity].second) {
         return true;
       }
+    }
+    // Check if we eat
+    if (newX == fruitX && newY == fruitY) {
+      grow = true;
+      newFruit();
     }
 
     push({h.first+directions[direction*2], h.second+directions[direction*2+1]});
@@ -126,6 +142,7 @@ public:
     }
     drawSnake();
     drawWalls();
+    drawFruit();
     return false;
   }
 
@@ -135,6 +152,7 @@ public:
     }
 
     array[tail] = p;
+    emptySquares[p.first*amountOfSquares+p.second] = false;
     tail = (tail + 1) % capacity;
     count++;
   }
@@ -148,10 +166,7 @@ public:
     head = (head + 1) % capacity;
     count--;
 
-    // Optional: shrink the array size if too many elements are removed
-    if (count > 0 && count == capacity / 4) {
-      resize(capacity / 2);
-    }
+    emptySquares[result.first*amountOfSquares+result.second] = true;
 
     return result;
   }
@@ -170,6 +185,10 @@ public:
     return count;
   }
 
+  void drawFruit() {
+    TFTscreen.rect(tileSize*(fruitX+1), tileSize*(fruitY+1), tileSize, tileSize);
+  }
+
   // drawing could be done more efficiently
   void drawSquare(int x, int y) {
     //TFTscreen.rect(xStart, yStart, width, height) 
@@ -178,7 +197,6 @@ public:
 
   void drawSnake() {
     TFTscreen.background(0, 0, 0);
-
 
     for (int i = head; i < count+head; i++) {
       drawSquare(array[i%capacity].first, array[i%capacity].second);
@@ -217,6 +235,10 @@ void setup() {
   TFTscreen.background(0, 0, 0);
   TFTscreen.stroke(210, 210, 210);
   TFTscreen.setTextSize(2);
+
+  for (int i = 0; i < amountOfSquares; i++) {
+    emptySquares[i] = false; // Initialize each element to false
+  }
 }
 
 void loop() {
