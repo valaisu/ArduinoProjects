@@ -21,7 +21,7 @@ bool borders = true;
 bool leftDown = false;
 bool rightDown = false;
 
-int buttonCooldown = 0;
+bool allowClick = true;
 
 int counter = 0;
 
@@ -260,13 +260,19 @@ void loop() {
 
   // check if button pressed
   if (digitalRead(BtnLeftIn) == HIGH) {
-    leftDown = true;
-    rightDown = false;
-  }
-
-  if (digitalRead(BtnRightIn) == HIGH) {
-    rightDown = true;
-    leftDown = false;
+    if (allowClick) {
+      leftDown = true;
+      rightDown = false;
+    }
+    allowClick = false;
+  } else if (digitalRead(BtnRightIn) == HIGH) {
+    if (allowClick) {
+      rightDown = true;
+      leftDown = false;
+    }
+    allowClick = false;
+  } else {
+    allowClick = true;
   }
   
   if (counter == 10){
