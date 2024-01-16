@@ -6,20 +6,24 @@
 
 int BtnLeftIn = 2;
 int BtnLeftOut = 3;
-int BtnState = 0;
+int BtnRightIn = 4;
+int BtnRightOut = 5;
+
 
 TFT TFTscreen = TFT(cs, dc, rst);
 
 
 
 int tileSize = 8;
-int boardSize = 10;
+int boardSize = 14;
 bool borders = true;
 // Buttons
 bool leftDown = false;
 bool rightDown = false;
 
 int counter = 0;
+
+bool gameOver = false;
 
 int directions[8] = {0, -1, 1, 0, 0, 1, -1, 0};
 //                     up   right left   down
@@ -68,45 +72,31 @@ public:
     }
   }
 
-  void updateSnake(int num, bool grow) {
+  void drawWalls() {
+    TFTscreen.rect(8, 8, 8*boardSize, 8*boardSize);
+    //TFTscreen.rect(1, 1, tileSize, (boardSize+2)*tileSize, tileSize);
+    //TFTscreen.rect(0, (boardSize+1)*tileSize, (boardSize+2)*tileSize, (boardSize+2)*tileSize);
+  }
+
+  bool updateSnake(int num, bool grow) {
     turn(num);
     Pair h = getLast();
-    Serial.println("");
-    Serial.print("Old: ");
-    Serial.println(h.first);
-    Serial.println(h.second);
-    Serial.print("Addition: ");
-    Serial.println(directions[direction*2]);
-    Serial.println(directions[direction*2+1]);
-    Serial.print("New: ");
-    Serial.println(h.first+directions[direction*2]);
-    Serial.println(h.second+directions[direction*2+1]);
-    Serial.println(direction*2);
-    Serial.println(direction*2+1);
-    Serial.print("Directions: ");
-    Serial.print((-1)%4);
-    
-    for (int i = 0; i < 8; i++) {
-      Serial.println(directions[i]);
-    }
-
-    
+    // check here if out of bounds or self collision
+    if (0 > h.first+directions[direction*2] ||
+        boardSize <= h.first+directions[direction*2] ||
+        0 > h.first+directions[direction*2+1] ||
+        boardSize <= h.first+directions[direction*2+1]) {
+          Serial.print("REKT");
+          return true;
+        }
 
     push({h.first+directions[direction*2], h.second+directions[direction*2+1]});
     if (!grow) {
       pop();
     }
-
-    Serial.println("The array: ");
-
-    for (int i = 0; i < count; i++) {
-
-      Serial.print(array[i].first);
-      Serial.print(" ");
-      Serial.println(array[i].second);
-    }
-
     drawSnake();
+    drawWalls();
+    return false;
   }
 
   void push(Pair p) {
@@ -159,8 +149,6 @@ public:
   void drawSnake() {
     TFTscreen.background(0, 0, 0);
 
-    Serial.print("head: ");
-    Serial.println(head);
 
     for (int i = head; i < count+head; i++) {
       drawSquare(array[i%capacity].first, array[i%capacity].second);
@@ -190,7 +178,10 @@ void setup() {
 
   pinMode(BtnLeftIn, INPUT);
   pinMode(BtnLeftOut, OUTPUT);
+  pinMode(BtnRightIn, INPUT);
+  pinMode(BtnRightOut, OUTPUT);
   digitalWrite(BtnLeftOut, HIGH);
+  digitalWrite(BtnRightOut, HIGH);
   TFTscreen.begin();
   TFTscreen.background(0, 0, 0);
   TFTscreen.stroke(210, 210, 210);
@@ -199,30 +190,37 @@ void setup() {
 
 void loop() {
   
-  delay(50);
+  delay(40);
   counter += 1;
 
   // check if button pressed
-  if (digitalRead(BtnLeftIn) == LOW) {
+  if (digitalRead(BtnLeftIn) == HIGH) {
     leftDown = true;
     rightDown = false;
-  /*} else if (buttonRight) {
+  }
+
+  if (digitalRead(BtnRightIn) == HIGH) {
     rightDown = true;
     leftDown = false;
-  */
   }
   
   if (counter == 10){
     
     counter=0;
-    // update game
     int n = 0;
     if (leftDown) {n = -1;}
     if (rightDown) {n = 1;}
-    Serial.println("Direction: ");
-    Serial.print(n);
-    Serial.println();
-    snake.updateSnake(n, false);
+
+    if (gameOver) {
+
+    } else {
+      if (snake.updateSnake(n, false)) {
+        gameOver = true;
+        TFTscreen.background(0, 0, 0);
+        TFTscreen.text("Game Over", 5, 60);
+      }
+    }
+    
     leftDown = false;
     rightDown = false;
   }
