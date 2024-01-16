@@ -43,6 +43,8 @@ private:
   int tail;
   int count;
   int direction = 1;
+  int fruitX = 1;
+  int fruitY = 1;
 
   void resize(int newCapacity) {
     Pair* temp = new Pair[newCapacity];
@@ -64,6 +66,21 @@ public:
     array = new Pair[capacity];
   }
 
+  void newFruit() {
+    /*
+    board has n squares
+    snake len = x
+    take rand int between r = [0, n-x-1]
+    move r times, skipping all squares containing snake
+    end up in free square
+    */
+    int square = random(0, boardSize*boardSize-count-1);
+    int current = 0;
+    while (true) {
+      
+    }
+  }
+
   void turn(int num) {
     // num is -1, 0 or 1
     direction = (direction+num)%4;
@@ -82,13 +99,26 @@ public:
     turn(num);
     Pair h = getLast();
     // check here if out of bounds or self collision
-    if (0 > h.first+directions[direction*2] ||
-        boardSize <= h.first+directions[direction*2] ||
-        0 > h.first+directions[direction*2+1] ||
-        boardSize <= h.first+directions[direction*2+1]) {
+    int newX = h.first + directions[direction*2];
+    int newY = h.second + directions[direction*2 + 1];
+    if (0 > newX || boardSize <= newX ||
+        0 > newY || boardSize <= newY) {
           Serial.print("REKT");
           return true;
         }
+    // Check collision, positions not updated yet
+    for (int i = count-4; i>0; i-=2) {
+      Serial.print(newX);
+      Serial.print(" ");
+      Serial.print(newY);
+      Serial.print(" ");
+      Serial.print(array[(head+i)%capacity].first);
+      Serial.print(" ");
+      Serial.println(array[(head+i)%capacity].second);
+      if (newX == array[(head+i)%capacity].first && newY == array[(head+i)%capacity].second) {
+        return true;
+      }
+    }
 
     push({h.first+directions[direction*2], h.second+directions[direction*2+1]});
     if (!grow) {
@@ -169,6 +199,7 @@ Snake snake;
 
 void setup() {
   // put your setup code here, to run once:
+  //snake.push({5, 4});
   snake.push({5, 5});
   snake.push({5, 6});
   snake.push({5, 7});
