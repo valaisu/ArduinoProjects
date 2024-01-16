@@ -21,6 +21,7 @@ bool borders = true;
 bool leftDown = false;
 bool rightDown = false;
 
+int buttonCooldown = 0;
 
 int counter = 0;
 
@@ -45,7 +46,6 @@ private:
   int capacity;
   int head;
   int tail;
-  int count;
   int direction = 1;
   
   int fruitX = 1;
@@ -68,6 +68,7 @@ private:
   }
 
 public:
+  int count;
   Snake() : capacity(2), head(0), tail(0), count(0) {
     array = new Pair[capacity];
   }
@@ -136,11 +137,13 @@ public:
       newFruit();
     }
 
-    push({h.first+directions[direction*2], h.second+directions[direction*2+1]});
+    push({newX, newY});
+    drawSquare(newX, newY);
     if (!grow) {
-      pop();
+      Pair removed = pop();
+      eraseSquare(removed.first, removed.second);
     }
-    drawSnake();
+    //drawSnake();
     drawWalls();
     drawFruit();
     return false;
@@ -186,13 +189,21 @@ public:
   }
 
   void drawFruit() {
+    TFTscreen.stroke(210, 0, 0);
     TFTscreen.rect(tileSize*(fruitX+1), tileSize*(fruitY+1), tileSize, tileSize);
+    TFTscreen.stroke(210, 210, 210);
   }
 
   // drawing could be done more efficiently
   void drawSquare(int x, int y) {
     //TFTscreen.rect(xStart, yStart, width, height) 
     TFTscreen.rect(tileSize*(x+1), tileSize*(y+1), tileSize, tileSize);
+  }
+
+  void eraseSquare(int x, int y) {
+    TFTscreen.stroke(0, 0, 0);
+    TFTscreen.rect(tileSize*(x+1), tileSize*(y+1), tileSize, tileSize);
+    TFTscreen.stroke(210, 210, 210);
   }
 
   void drawSnake() {
@@ -233,6 +244,7 @@ void setup() {
   digitalWrite(BtnRightOut, HIGH);
   TFTscreen.begin();
   TFTscreen.background(0, 0, 0);
+  snake.drawSnake();
   TFTscreen.stroke(210, 210, 210);
   TFTscreen.setTextSize(2);
 
@@ -270,7 +282,9 @@ void loop() {
       if (snake.updateSnake(n, false)) {
         gameOver = true;
         TFTscreen.background(0, 0, 0);
-        TFTscreen.text("Game Over", 5, 60);
+        TFTscreen.text("Game Over", 5, 45);
+        String text = "Score: " + String(snake.count);
+        TFTscreen.text(text.c_str(), 5, 75);
       }
     }
     
