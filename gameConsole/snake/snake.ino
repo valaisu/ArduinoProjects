@@ -4,14 +4,53 @@
 #define dc 9
 #define rst 8
 
-int BtnLeftIn = 2;
-int BtnLeftOut = 3;
-int BtnRightIn = 4;
-int BtnRightOut = 5;
+int BtnLeftIn = 3;
+int BtnLeftOut = 2;
+int BtnRightIn = 5;
+int BtnRightOut = 4;
 
 
 TFT TFTscreen = TFT(cs, dc, rst);
 
+/*
+Connection quide:
+
+parts needed:
+1x TFT 1.8 Display
+1x 9V battery connector
+1x Arduino Uno/nano/maybe some other
+2x resistors
+
+Always be careful and make sure you know what you
+are doing while building electrical circuits!!
+
+TFT 1.8 Display:
+Vcc   ->  5v
+Gnd   ->  Gnd
+Cs    ->  10
+Reset ->  8
+A0    ->  9
+SDA   ->  11
+Sck   ->  13
+LED   ->  3V3
+
+Buttons:
+My buttons have side1 and side2, which are 
+connected when the button is pressed
+B11 describes Button 1, side 1
+
+2    ->  B11
+B11  ->  Resistor1  ->  Gnd
+B12  ->  3
+4    ->  B21
+B21  ->  Resistor2  ->  Gnd
+B22  ->  5
+
+Power:
++  ->  Vin
+-  ->  Gnd
+
+*/
 
 
 int tileSize = 8;
