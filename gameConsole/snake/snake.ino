@@ -195,12 +195,12 @@ public:
       newFruit();
     }
     
-    push({newX, newY});
-    drawSquare(newX, newY);
     if (!grow) {
       Pair removed = pop();
       eraseSquare(removed.first, removed.second);
     }
+    push({newX, newY});
+    drawSquare(newX, newY);
     
     drawFruit();
     return false;
@@ -300,19 +300,33 @@ bool inDifficultyMenu = false;
 bool inGameMenu = false;
 
 void drawDifficulty() {
-  //TFTscreen.rect(xStart, yStart, width, height)
+  // Displays the difficulty
+  TFTscreen.rect(24, 59, 82, 10);
+  for (int i = 0; i < difficulty; i++) {
+    TFTscreen.rect(25+i*8, 60, 8, 8);
+  }
 }
 void harder() {
-  
+  // Edits difficulty and it's display
+  if (difficulty < 10){
+    difficulty ++;
+    TFTscreen.rect(17+difficulty*8, 60, 8, 8);
+  }
 }
 void easier() {
-
+  // Same as above
+  if (difficulty > 1) {
+    TFTscreen.stroke(0, 0, 0);
+    TFTscreen.rect(17+difficulty*8, 60, 8, 8);
+    TFTscreen.stroke(210, 210, 210);
+    difficulty --;
+  }
 }
 
 void loop() {
   
   if (inGame) {
-    delay(200/difficulty);
+    delay(120/difficulty);
     counter += 1;
 
     // check if button pressed
@@ -333,36 +347,28 @@ void loop() {
     }
     
     if (counter == 10){
-      
       counter=0;
       int n = 0;
       if (leftDown) {n = 1;}
       if (rightDown) {n = -1;}
+      if (snake.updateSnake(n, false)) {
+        gameOver = true;
+        // erase all, display score
+        TFTscreen.background(0, 0, 0);
+        TFTscreen.text("Game Over", 5, 5);
+        String text = "Score: " + String(snake.count);
+        TFTscreen.text(text.c_str(), 5, 35);
+        // display the game menu
+        TFTscreen.setTextSize(1);
+        TFTscreen.text("New game", 35, 73);
+        TFTscreen.circle(15, 75, 5);
+        TFTscreen.text("Change", 40, 103);
+        TFTscreen.text("Difficulty", 30, 118);
+        TFTscreen.circle(105, 115, 5);
+        TFTscreen.setTextSize(2);
 
-      if (gameOver) {
-
-      } else {
-        if (snake.updateSnake(n, false)) {
-          gameOver = true;
-          TFTscreen.background(0, 0, 0);
-          TFTscreen.text("Game Over", 5, 5);
-          String text = "Score: " + String(snake.count);
-          TFTscreen.text(text.c_str(), 5, 35);
-
-          TFTscreen.setTextSize(1);
-
-          TFTscreen.text("New game", 35, 73);
-          TFTscreen.circle(15, 75, 5);
-
-          TFTscreen.text("Change", 40, 103);
-          TFTscreen.text("Difficulty", 30, 118);
-          TFTscreen.circle(105, 115, 5);
-
-          TFTscreen.setTextSize(2);
-
-          inGame = false;
-          inGameMenu = true;
-        }
+        inGame = false;
+        inGameMenu = true;
       }
       
       leftDown = false;
@@ -373,21 +379,48 @@ void loop() {
     if (digitalRead(BtnLeftIn) == HIGH && digitalRead(BtnRightIn) == HIGH) {
       // start the game
       inGame = true;
+      inDifficultyMenu = false;
       gameOver = false;
+      snake.resetSnake();
       TFTscreen.background(0, 0, 0);
       snake.drawWalls();
+    } else if (digitalRead(BtnRightIn) == HIGH) {
+      // difficulty down
+      if (allowClick) {
+        easier();
+        allowClick = false;
+      }
+    } else if (digitalRead(BtnLeftIn) == HIGH) {
+      // difficulty up
+      if (allowClick) {
+        harder();
+        allowClick = false;
+      }
+    } else {
+      allowClick = true;
     }
-    
   } else if (inGameMenu) {
     delay(50);
     if (digitalRead(BtnRightIn) == HIGH) {
       // restart game
       snake.resetSnake();
-      inDifficultyMenu = false;
+      inGameMenu = false;
       inGame = true;
       gameOver = false;
       TFTscreen.background(0, 0, 0);
       snake.drawWalls();
+    } else if (digitalRead(BtnLeftIn) == HIGH) {
+      // transition to difficulty menu
+      inDifficultyMenu = true;
+      inGameMenu = false;
+      TFTscreen.background(0, 0, 0);
+      drawDifficulty();
+      TFTscreen.setTextSize(1);
+      TFTscreen.text("New game", 35, 93);
+      TFTscreen.setTextSize(2);
+      TFTscreen.circle(15, 95, 5);
+      TFTscreen.circle(105, 95, 5);
+
     }
   }
 }
