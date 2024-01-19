@@ -246,6 +246,17 @@ public:
     TFTscreen.rect(7, 7, 8*boardSize+2, 8*boardSize+2);
   }
 
+  void resetSnake() {
+    while (count != 0) {
+      pop();
+    }
+    push({5, 5});
+    push({5, 6});
+    push({5, 7});
+    push({5, 8});
+    newFruit();
+  }
+
   ~Snake() {
     delete[] array;
   }
@@ -283,14 +294,25 @@ void setup() {
 }
 
 int counter = 0;
+int difficulty = 5;
 bool inGame = true;
 bool inDifficultyMenu = false;
 bool inGameMenu = false;
 
+void drawDifficulty() {
+  //TFTscreen.rect(xStart, yStart, width, height)
+}
+void harder() {
+  
+}
+void easier() {
+
+}
+
 void loop() {
   
   if (inGame) {
-    delay(40);
+    delay(200/difficulty);
     counter += 1;
 
     // check if button pressed
@@ -323,9 +345,23 @@ void loop() {
         if (snake.updateSnake(n, false)) {
           gameOver = true;
           TFTscreen.background(0, 0, 0);
-          TFTscreen.text("Game Over", 5, 45);
+          TFTscreen.text("Game Over", 5, 5);
           String text = "Score: " + String(snake.count);
-          TFTscreen.text(text.c_str(), 5, 75);
+          TFTscreen.text(text.c_str(), 5, 35);
+
+          TFTscreen.setTextSize(1);
+
+          TFTscreen.text("New game", 35, 73);
+          TFTscreen.circle(15, 75, 5);
+
+          TFTscreen.text("Change", 40, 103);
+          TFTscreen.text("Difficulty", 30, 118);
+          TFTscreen.circle(105, 115, 5);
+
+          TFTscreen.setTextSize(2);
+
+          inGame = false;
+          inGameMenu = true;
         }
       }
       
@@ -333,8 +369,25 @@ void loop() {
       rightDown = false;
     }
   } else if (inDifficultyMenu) {
-    //TODO: implement
+    delay(50);
+    if (digitalRead(BtnLeftIn) == HIGH && digitalRead(BtnRightIn) == HIGH) {
+      // start the game
+      inGame = true;
+      gameOver = false;
+      TFTscreen.background(0, 0, 0);
+      snake.drawWalls();
+    }
+    
   } else if (inGameMenu) {
-    //TODO: implement
+    delay(50);
+    if (digitalRead(BtnRightIn) == HIGH) {
+      // restart game
+      snake.resetSnake();
+      inDifficultyMenu = false;
+      inGame = true;
+      gameOver = false;
+      TFTscreen.background(0, 0, 0);
+      snake.drawWalls();
+    }
   }
 }
