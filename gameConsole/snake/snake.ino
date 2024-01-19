@@ -1,17 +1,3 @@
-#include <TFT.h> 
-#include <SPI.h>
-#define cs 10
-#define dc 9
-#define rst 8
-
-int BtnLeftIn = 3;
-int BtnLeftOut = 2;
-int BtnRightIn = 5;
-int BtnRightOut = 4;
-
-
-TFT TFTscreen = TFT(cs, dc, rst);
-
 /*
 Connection quide:
 
@@ -52,34 +38,51 @@ Power:
 
 */
 
+#include <TFT.h> 
+#include <SPI.h>
+#define cs 10
+#define dc 9
+#define rst 8
 
-int tileSize = 8;
-int boardSize = 14;
+const int BtnLeftIn = 3;
+const int BtnLeftOut = 2;
+const int BtnRightIn = 4;
+const int BtnRightOut = 5;
+
+const int tileSize = 8;
+const int boardSize = 14;
+const int amountOfSquares = 14*14; 
+
 bool borders = true;
-// Buttons
 bool leftDown = false;
 bool rightDown = false;
-
 bool allowClick = true;
-
-int counter = 0;
-
 bool gameOver = false;
 
-int directions[8] = {0, -1, 1, 0, 0, 1, -1, 0};
-//                     up   right left   down
-
-const int amountOfSquares = 14*14; 
 bool emptySquares[amountOfSquares]; 
+const int directions[8] = {0, -1, 1, 0, 0, 1, -1, 0};
+//                           up   right left   down
+TFT TFTscreen = TFT(cs, dc, rst);
 
 
 struct Pair {
+/*
+  Used to store coordinates
+*/
   int first;
   int second;
 };
 
 
 class Snake {
+/*
+  Hold inside all the information about the snake as 
+  well as the functions for updating the snake based
+  on user actions
+
+  The snake is a queue, where the head of the queue
+  is the tail of the snake and vise versa
+*/
 private:
   Pair* array;
   int capacity;
@@ -89,7 +92,6 @@ private:
   
   int fruitX = 1;
   int fruitY = 1;
-
 
   void resize(int newCapacity) {
     Pair* temp = new Pair[newCapacity];
@@ -106,24 +108,23 @@ private:
     array = temp;
   }
 
-public:
-  int count;
-  Snake() : capacity(2), head(0), tail(0), count(0) {
-    array = new Pair[capacity];
+  void rotateSnake(int num) {
+    // Rotates the snake (if player commands so)
+    // num is -1, 0 or 1
+    direction = (direction+num)%4;
+    if (direction<0) {
+      direction += 4;
+    }
   }
 
   void newFruit() {
     /*
-    board has n squares
-    keep list of empty squares
-    snake len = x
-    take rand int between r = [0, n-x-1]
-    choose emptySquares[r]
+    Randomizes a new place for the fruit based on
+    the list of free squares
     */
     int square = random(0, boardSize*boardSize-count-1);
-
-    Serial.print("New: ");
-    Serial.println(square);
+    //Serial.print("New: ");
+    //Serial.println(square);
     int free = 0;
     int current = 0;
     while (true) {
@@ -139,32 +140,50 @@ public:
     }
   }
 
-  void turn(int num) {
-    // num is -1, 0 or 1
-    direction = (direction+num)%4;
-    if (direction<0) {
-      direction += 4;
+  Pair getLast() {
+    if (count == 0) {
+        return Pair();
     }
+    // The index of the most recently added element is (tail - 1 + capacity) % capacity
+    int lastIndex = (tail - 1 + capacity) % capacity;
+    return array[lastIndex];
   }
 
-  void drawWalls() {
-    TFTscreen.rect(8, 8, 8*boardSize, 8*boardSize);
-    //TFTscreen.rect(1, 1, tileSize, (boardSize+2)*tileSize, tileSize);
-    //TFTscreen.rect(0, (boardSize+1)*tileSize, (boardSize+2)*tileSize, (boardSize+2)*tileSize);
+  void drawFruit() {
+    TFTscreen.stroke(210, 0, 0);
+    TFTscreen.rect(tileSize*(fruitX+1), tileSize*(fruitY+1), tileSize, tileSize);
+    TFTscreen.stroke(210, 210, 210);
+  }
+
+  void drawSquare(int x, int y) {
+    //TFTscreen.rect(xStart, yStart, width, height) 
+    TFTscreen.rect(tileSize*(x+1), tileSize*(y+1), tileSize, tileSize);
+  }
+
+  void eraseSquare(int x, int y) {
+    TFTscreen.stroke(0, 0, 0);
+    TFTscreen.rect(tileSize*(x+1), tileSize*(y+1), tileSize, tileSize);
+    TFTscreen.stroke(210, 210, 210);
+  }
+
+
+public:
+  int count;
+  Snake() : capacity(2), head(0), tail(0), count(0) {
+    array = new Pair[capacity];
   }
 
   bool updateSnake(int num, bool grow) {
-    turn(num);
+    rotateSnake(num);
     Pair h = getLast();
-    // check here if out of bounds or self collision
     int newX = h.first + directions[direction*2];
     int newY = h.second + directions[direction*2 + 1];
+    // check if out of bounds
     if (0 > newX || boardSize <= newX ||
         0 > newY || boardSize <= newY) {
-          Serial.print("REKT");
           return true;
         }
-    // Check collision, positions not updated yet
+    // Check collision, note: positions not updated yet
     for (int i = count-4; i>0; i-=2) {
       if (newX == array[(head+i)%capacity].first && newY == array[(head+i)%capacity].second) {
         return true;
@@ -175,15 +194,14 @@ public:
       grow = true;
       newFruit();
     }
-
+    
     push({newX, newY});
     drawSquare(newX, newY);
     if (!grow) {
       Pair removed = pop();
       eraseSquare(removed.first, removed.second);
     }
-    //drawSnake();
-    drawWalls();
+    
     drawFruit();
     return false;
   }
@@ -201,7 +219,7 @@ public:
 
   Pair pop() {
     if (count == 0) {
-      return Pair(); // Return an empty Pair if queue is empty
+      return Pair();
     }
 
     Pair result = array[head];
@@ -213,44 +231,19 @@ public:
     return result;
   }
 
-  Pair getLast() {
-    if (count == 0) {
-        return Pair(); // Return an empty Pair if the queue is empty
-    }
-
-    // The index of the most recently added element is (tail - 1 + capacity) % capacity
-    int lastIndex = (tail - 1 + capacity) % capacity;
-    return array[lastIndex];
-  }
-
   int size() {
     return count;
   }
 
-  void drawFruit() {
-    TFTscreen.stroke(210, 0, 0);
-    TFTscreen.rect(tileSize*(fruitX+1), tileSize*(fruitY+1), tileSize, tileSize);
-    TFTscreen.stroke(210, 210, 210);
-  }
-
-  // drawing could be done more efficiently
-  void drawSquare(int x, int y) {
-    //TFTscreen.rect(xStart, yStart, width, height) 
-    TFTscreen.rect(tileSize*(x+1), tileSize*(y+1), tileSize, tileSize);
-  }
-
-  void eraseSquare(int x, int y) {
-    TFTscreen.stroke(0, 0, 0);
-    TFTscreen.rect(tileSize*(x+1), tileSize*(y+1), tileSize, tileSize);
-    TFTscreen.stroke(210, 210, 210);
-  }
-
   void drawSnake() {
     TFTscreen.background(0, 0, 0);
-
     for (int i = head; i < count+head; i++) {
       drawSquare(array[i%capacity].first, array[i%capacity].second);
     }
+  }
+
+  void drawWalls() {
+    TFTscreen.rect(7, 7, 8*boardSize+2, 8*boardSize+2);
   }
 
   ~Snake() {
@@ -260,20 +253,15 @@ public:
 
 
 
-
-
 Snake snake;
 
 
 void setup() {
-  // put your setup code here, to run once:
   //snake.push({5, 4});
   snake.push({5, 5});
   snake.push({5, 6});
   snake.push({5, 7});
   snake.push({5, 8});
-
-  Serial.begin(9600);
 
   pinMode(BtnLeftIn, INPUT);
   pinMode(BtnLeftOut, OUTPUT);
@@ -283,58 +271,70 @@ void setup() {
   digitalWrite(BtnRightOut, HIGH);
   TFTscreen.begin();
   TFTscreen.background(0, 0, 0);
-  snake.drawSnake();
   TFTscreen.stroke(210, 210, 210);
   TFTscreen.setTextSize(2);
+  TFTscreen.setRotation(0);
+  snake.drawSnake();
+  snake.drawWalls();
 
   for (int i = 0; i < amountOfSquares; i++) {
-    emptySquares[i] = false; // Initialize each element to false
+    emptySquares[i] = false;
   }
 }
 
+int counter = 0;
+bool inGame = true;
+bool inDifficultyMenu = false;
+bool inGameMenu = false;
+
 void loop() {
   
-  delay(40);
-  counter += 1;
+  if (inGame) {
+    delay(40);
+    counter += 1;
 
-  // check if button pressed
-  if (digitalRead(BtnLeftIn) == HIGH) {
-    if (allowClick) {
-      leftDown = true;
+    // check if button pressed
+    if (digitalRead(BtnLeftIn) == HIGH) {
+      if (allowClick) {
+        leftDown = true;
+        rightDown = false;
+      }
+      allowClick = false;
+    } else if (digitalRead(BtnRightIn) == HIGH) {
+      if (allowClick) {
+        rightDown = true;
+        leftDown = false;
+      }
+      allowClick = false;
+    } else {
+      allowClick = true;
+    }
+    
+    if (counter == 10){
+      
+      counter=0;
+      int n = 0;
+      if (leftDown) {n = 1;}
+      if (rightDown) {n = -1;}
+
+      if (gameOver) {
+
+      } else {
+        if (snake.updateSnake(n, false)) {
+          gameOver = true;
+          TFTscreen.background(0, 0, 0);
+          TFTscreen.text("Game Over", 5, 45);
+          String text = "Score: " + String(snake.count);
+          TFTscreen.text(text.c_str(), 5, 75);
+        }
+      }
+      
+      leftDown = false;
       rightDown = false;
     }
-    allowClick = false;
-  } else if (digitalRead(BtnRightIn) == HIGH) {
-    if (allowClick) {
-      rightDown = true;
-      leftDown = false;
-    }
-    allowClick = false;
-  } else {
-    allowClick = true;
+  } else if (inDifficultyMenu) {
+    //TODO: implement
+  } else if (inGameMenu) {
+    //TODO: implement
   }
-  
-  if (counter == 10){
-    
-    counter=0;
-    int n = 0;
-    if (leftDown) {n = -1;}
-    if (rightDown) {n = 1;}
-
-    if (gameOver) {
-
-    } else {
-      if (snake.updateSnake(n, false)) {
-        gameOver = true;
-        TFTscreen.background(0, 0, 0);
-        TFTscreen.text("Game Over", 5, 45);
-        String text = "Score: " + String(snake.count);
-        TFTscreen.text(text.c_str(), 5, 75);
-      }
-    }
-    
-    leftDown = false;
-    rightDown = false;
-  }
-
 }
